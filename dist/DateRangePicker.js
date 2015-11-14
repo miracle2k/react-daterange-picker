@@ -73,12 +73,14 @@ var DateRangePicker = _react2['default'].createClass({
     defaultState: _react2['default'].PropTypes.string,
     disableNavigation: _react2['default'].PropTypes.bool,
     firstOfWeek: _react2['default'].PropTypes.oneOf([0, 1, 2, 3, 4, 5, 6]),
+    fullDayStates: _react2['default'].PropTypes.bool,
     helpMessage: _react2['default'].PropTypes.string,
     initialDate: _react2['default'].PropTypes.instanceOf(Date),
     initialFromValue: _react2['default'].PropTypes.bool,
     initialMonth: _react2['default'].PropTypes.number, // Overrides values derived from initialDate/initialRange
     initialRange: _react2['default'].PropTypes.object,
     initialYear: _react2['default'].PropTypes.number, // Overrides values derived from initialDate/initialRange
+    locale: _react2['default'].PropTypes.string,
     maximumDate: _react2['default'].PropTypes.instanceOf(Date),
     minimumDate: _react2['default'].PropTypes.instanceOf(Date),
     numberOfCalendars: _react2['default'].PropTypes.number,
@@ -104,11 +106,13 @@ var DateRangePicker = _react2['default'].createClass({
       bemBlock: 'DateRangePicker',
       numberOfCalendars: 1,
       firstOfWeek: 0,
+      fullDayStates: false,
       disableNavigation: false,
       nextLabel: '',
       previousLabel: '',
       initialDate: initialDate,
       initialFromValue: true,
+      locale: (0, _moment2['default'])().locale(),
       selectionType: 'range',
       singleDateRange: false,
       stateDefinitions: {
@@ -194,6 +198,12 @@ var DateRangePicker = _react2['default'].createClass({
     var maxDate = absoluteMaximum;
     var dateCursor = (0, _moment2['default'])(minDate).startOf('day');
 
+    // If states should always include the full day at the edges, we need to
+    // use different boundaries for the "default state" ranges we generate
+    // here. Otherwise the rendering code in CalenderDate cannot know if the
+    // day is at a boundary or not.
+    var shiftDays = this.props.fullDayStates ? 1 : 0;
+
     var defs = _immutable2['default'].fromJS(stateDefinitions);
 
     dateStates.forEach(function (s) {
@@ -204,7 +214,7 @@ var DateRangePicker = _react2['default'].createClass({
       if (!dateCursor.isSame(start, 'day')) {
         actualStates.push({
           state: defaultState,
-          range: _moment2['default'].range(dateCursor, start)
+          range: _moment2['default'].range((0, _moment2['default'])(dateCursor).add(shiftDays, 'day'), (0, _moment2['default'])(start).subtract(shiftDays, 'day'))
         });
       }
       actualStates.push(s);
@@ -213,7 +223,7 @@ var DateRangePicker = _react2['default'].createClass({
 
     actualStates.push({
       state: defaultState,
-      range: _moment2['default'].range(dateCursor, maxDate)
+      range: _moment2['default'].range((0, _moment2['default'])(dateCursor).add(shiftDays, 'day'), maxDate)
     });
 
     // sanitize date states
@@ -258,6 +268,13 @@ var DateRangePicker = _react2['default'].createClass({
     var blockedRanges = this.nonSelectableStateRanges().map(function (r) {
       return r.get('range');
     });
+    if (this.props.fullDayStates)
+      // range.intersect() ignores when one range ends on the same day
+      // the other begins; for the block to work, we have to extend the
+      // ranges by one day.
+      blockedRanges = blockedRanges.map(function (r) {
+        r = r.clone();r.start.subtract(1, 'day');r.end.add(1, 'day');return r;
+      });
     var intersect = undefined;
 
     if (forwards) {
@@ -488,6 +505,7 @@ var DateRangePicker = _react2['default'].createClass({
     var bemBlock = _props2.bemBlock;
     var bemNamespace = _props2.bemNamespace;
     var firstOfWeek = _props2.firstOfWeek;
+    var fullDayStates = _props2.fullDayStates;
     var numberOfCalendars = _props2.numberOfCalendars;
     var selectionType = _props2.selectionType;
     var value = _props2.value;
@@ -536,6 +554,7 @@ var DateRangePicker = _react2['default'].createClass({
       dateStates: dateStates,
       enabledRange: enabledRange,
       firstOfWeek: firstOfWeek,
+      fullDayStates: fullDayStates,
       hideSelection: hideSelection,
       highlightedDate: highlightedDate,
       highlightedRange: highlightedRange,
@@ -551,7 +570,8 @@ var DateRangePicker = _react2['default'].createClass({
       onHighlightDate: this.onHighlightDate,
       onUnHighlightDate: this.onUnHighlightDate,
       dateRangesForDate: this.dateRangesForDate,
-      dateComponent: _calendarCalendarDate2['default']
+      dateComponent: _calendarCalendarDate2['default'],
+      locale: this.props.locale
     };
 
     return _react2['default'].createElement(_calendarCalendarMonth2['default'], props);
