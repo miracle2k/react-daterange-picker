@@ -1,5 +1,6 @@
-import React from 'react/addons';
-import moment from 'moment-range';
+import React from 'react';
+import moment from 'moment';
+import {} from 'moment-range';
 import Immutable from 'immutable';
 import calendar from 'calendar';
 
@@ -14,11 +15,10 @@ import PaginationArrow from './PaginationArrow';
 
 import isMomentRange from './utils/isMomentRange';
 
-const PureRenderMixin = React.addons.PureRenderMixin;
+import PureRenderMixin from 'react-addons-pure-render-mixin';
+
 const absoluteMinimum = moment(new Date(-8640000000000000 / 2)).startOf('day');
 const absoluteMaximum = moment(new Date(8640000000000000 / 2)).startOf('day');
-
-React.initializeTouchEvents(true);
 
 function noop() {}
 
@@ -442,7 +442,7 @@ const DateRangePicker = React.createClass({
       fullDayStates,
       numberOfCalendars,
       selectionType,
-      value
+      value,
     } = this.props;
 
     let {
@@ -450,7 +450,7 @@ const DateRangePicker = React.createClass({
       enabledRange,
       hideSelection,
       highlightedDate,
-      highlightedRange
+      highlightedRange,
     } = this.state;
 
     let monthDate = this.getMonthDate();
