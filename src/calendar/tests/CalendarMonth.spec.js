@@ -1,9 +1,10 @@
 import React from 'react';
-import TestUtils from 'react-addons-test-utils';
+import ReactDOM from 'react-dom';
+import ReactTestUtils from 'react-dom/test-utils';
+import ShallowRenderer from 'react-test-renderer/shallow';
 import CalendarMonth from '../CalendarMonth';
 import CalendarDate from '../CalendarDate';
-import moment from 'moment';
-import {} from 'moment-range';
+import moment from '../../moment-range';
 import _ from 'underscore';
 
 
@@ -34,6 +35,8 @@ describe('The CalendarMonth Component', function () {
         },
         onMonthChange: function () {},
         onYearChange: function () {},
+        bemBlock: 'DateRangePicker',
+        locale: 'en',
       }, props);
 
 
@@ -41,7 +44,7 @@ describe('The CalendarMonth Component', function () {
     };
 
     this.useShallowRenderer = (props) => {
-      this.shallowRenderer = TestUtils.createRenderer();
+      this.shallowRenderer = new ShallowRenderer();
       this.shallowRenderer.render(getCalendarMonth(props));
       this.renderedComponent = this.shallowRenderer.getRenderOutput();
       this.container = this.renderedComponent.props.children[0];
@@ -49,28 +52,22 @@ describe('The CalendarMonth Component', function () {
     };
 
     this.useDocumentRenderer = (props) => {
-      this.component = this.renderedComponent = TestUtils.renderIntoDocument(getCalendarMonth(props));
+      this.component = this.renderedComponent = ReactTestUtils.renderIntoDocument(getCalendarMonth(props));
     };
 
-    this.spyCx = spyOn(CalendarMonth.prototype.__reactAutoBindMap, 'cx').and.callFake( (data) => {
-      return data.element || 'my-class';
-    });
     this.firstOfMonth = moment();
   });
 
   afterEach( function () {
     if (this.component) {
-      React.unmountComponentAtNode(React.findDOMNode(this.component).parentNode);
+      ReactDOM.unmountComponentAtNode(ReactDOM.findDOMNode(this.component).parentNode);
     }
   });
 
   it('should render the right element', function () {
     this.useShallowRenderer();
     expect(this.renderedComponent.type).toBe('div');
-    expect(this.spyCx).toHaveBeenCalledWith({
-      element: 'Month',
-    });
-    expect(this.renderedComponent.props.className).toEqual('Month');
+    expect(this.renderedComponent.props.className).toEqual('DateRangePicker__Month');
   });
 
   describe('has a label acting as a header', function () {
@@ -81,10 +78,7 @@ describe('The CalendarMonth Component', function () {
 
     it('which is a div with the correct class', function () {
       expect(this.container.type).toBe('div');
-      expect(this.container.props.className).toEqual('MonthHeader');
-      expect(this.spyCx).toHaveBeenCalledWith({
-        element: 'MonthHeader',
-      });
+      expect(this.container.props.className).toEqual('DateRangePicker__MonthHeader');
     });
 
     describe('displaying month information', function () {
@@ -95,13 +89,7 @@ describe('The CalendarMonth Component', function () {
         const span = this.container.props.children[0];
 
         expect(span.type).toBe('span');
-        expect(span.props.className).toEqual('MonthHeaderLabel');
-        expect(this.spyCx).toHaveBeenCalledWith({
-          element: 'MonthHeaderLabel',
-          modifiers: {
-            month: true,
-          },
-        });
+        expect(span.props.className).toEqual('DateRangePicker__MonthHeaderLabel DateRangePicker__MonthHeaderLabel--month');
       });
 
       it('which displays the name of the month', function () {
@@ -122,22 +110,19 @@ describe('The CalendarMonth Component', function () {
         this.useShallowRenderer();
         const select = this.container.props.children[0].props.children[1];
         expect(select.type).toBe('select');
-        expect(this.spyCx).toHaveBeenCalledWith({
-          element: 'MonthHeaderSelect',
-        });
         expect(select.props.value).toBe(this.firstOfMonth.month());
-        expect(select.props.className).toEqual('MonthHeaderSelect');
+        expect(select.props.className).toEqual('DateRangePicker__MonthHeaderSelect');
         expect(select.props.children.length).toBe(12);
       });
 
       it('which calls props.onMonthChange if props.disableNavigation is false and if the selected value changes', function () {
         var onMonthChange = jasmine.createSpy();
-        this.useDocumentRenderer({
-          onMonthChange: onMonthChange,
-        });
-        var select = TestUtils.scryRenderedDOMComponentsWithTag(this.renderedComponent, 'select')[0].getDOMNode();
-        select.value = '2';
-        TestUtils.Simulate.change(select);
+        this.useDocumentRenderer({ onMonthChange: onMonthChange });
+
+        var select = ReactTestUtils.scryRenderedDOMComponentsWithTag(this.renderedComponent, 'select')[0];
+        select.value = 2;
+        ReactTestUtils.Simulate.change(select);
+
         expect(onMonthChange).toHaveBeenCalledWith(2);
       });
 
@@ -151,13 +136,7 @@ describe('The CalendarMonth Component', function () {
         const span = this.container.props.children[2];
 
         expect(span.type).toBe('span');
-        expect(span.props.className).toEqual('MonthHeaderLabel');
-        expect(this.spyCx).toHaveBeenCalledWith({
-          element: 'MonthHeaderLabel',
-          modifiers: {
-            year: true,
-          },
-        });
+        expect(span.props.className).toEqual('DateRangePicker__MonthHeaderLabel DateRangePicker__MonthHeaderLabel--year');
       });
 
       it('which displays the name of the year', function () {
@@ -178,11 +157,8 @@ describe('The CalendarMonth Component', function () {
         this.useShallowRenderer();
         const select = this.container.props.children[2].props.children[1];
         expect(select.type).toBe('select');
-        expect(this.spyCx).toHaveBeenCalledWith({
-          element: 'MonthHeaderSelect',
-        });
         expect(select.props.value).toBe(this.firstOfMonth.year());
-        expect(select.props.className).toEqual('MonthHeaderSelect');
+        expect(select.props.className).toEqual('DateRangePicker__MonthHeaderSelect');
         expect(select.props.children.length).toBe(15);
       });
 
@@ -191,10 +167,10 @@ describe('The CalendarMonth Component', function () {
         this.useDocumentRenderer({
           onYearChange: onYearChange,
         });
-        var select = TestUtils.scryRenderedDOMComponentsWithTag(this.renderedComponent, 'select')[1].getDOMNode();
+        var select = ReactTestUtils.scryRenderedDOMComponentsWithTag(this.renderedComponent, 'select')[1];
         var value = (this.firstOfMonth.year() + 1).toString();
         select.value = value;
-        TestUtils.Simulate.change(select);
+        ReactTestUtils.Simulate.change(select);
         expect(onYearChange).toHaveBeenCalledWith(parseInt(value, 10));
       });
 
@@ -205,21 +181,18 @@ describe('The CalendarMonth Component', function () {
       it('which has the expected className', function () {
         this.useShallowRenderer();
         expect(this.table.type).toBe('table');
-        expect(this.table.props.className).toEqual('MonthDates');
-        expect(this.spyCx).toHaveBeenCalledWith({
-          element: 'MonthDates',
-        });
+        expect(this.table.props.className).toEqual('DateRangePicker__MonthDates');
       });
 
       it('whose head contains day information', function () {
-        expect(this.table.props.children[0].props.children).toEqual(<tr className='Weekdays'>
-          <th className='WeekdayHeading' key='Sunday,Sun' scope='col'><abbr title='Sunday'>Sun</abbr></th>
-          <th className='WeekdayHeading' key='Monday,Mon' scope='col'><abbr title='Monday'>Mon</abbr></th>
-          <th className='WeekdayHeading' key='Tuesday,Tue' scope='col'><abbr title='Tuesday'>Tue</abbr></th>
-          <th className='WeekdayHeading' key='Wednesday,Wed' scope='col'><abbr title='Wednesday'>Wed</abbr></th>
-          <th className='WeekdayHeading' key='Thursday,Thu' scope='col'><abbr title='Thursday'>Thu</abbr></th>
-          <th className='WeekdayHeading' key='Friday,Fri' scope='col'><abbr title='Friday'>Fri</abbr></th>
-          <th className='WeekdayHeading' key='Saturday,Sat' scope='col'><abbr title='Saturday'>Sat</abbr></th>
+        expect(this.table.props.children[0].props.children).toEqual(<tr className='DateRangePicker__Weekdays'>
+          <th className='DateRangePicker__WeekdayHeading' key='Sunday,Sun' scope='col'><abbr title='Sunday'>Sun</abbr></th>
+          <th className='DateRangePicker__WeekdayHeading' key='Monday,Mon' scope='col'><abbr title='Monday'>Mon</abbr></th>
+          <th className='DateRangePicker__WeekdayHeading' key='Tuesday,Tue' scope='col'><abbr title='Tuesday'>Tue</abbr></th>
+          <th className='DateRangePicker__WeekdayHeading' key='Wednesday,Wed' scope='col'><abbr title='Wednesday'>Wed</abbr></th>
+          <th className='DateRangePicker__WeekdayHeading' key='Thursday,Thu' scope='col'><abbr title='Thursday'>Thu</abbr></th>
+          <th className='DateRangePicker__WeekdayHeading' key='Friday,Fri' scope='col'><abbr title='Friday'>Fri</abbr></th>
+          <th className='DateRangePicker__WeekdayHeading' key='Saturday,Sat' scope='col'><abbr title='Saturday'>Sat</abbr></th>
         </tr>);
       });
 

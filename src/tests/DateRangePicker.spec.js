@@ -3,13 +3,14 @@ import PaginationArrow from '../PaginationArrow';
 import CalendarMonth from '../calendar/CalendarMonth';
 import Legend from '../Legend.jsx';
 
-import moment from 'moment';
-import 'moment-range';
+import moment from '../moment-range';
 import isMomentRange from '../utils/isMomentRange';
 import areMomentRangesEqual from '../utils/areMomentRangesEqual';
 import Immutable from 'immutable';
 import React from 'react';
-import TestUtils from 'react-addons-test-utils';
+import ReactDOM from 'react-dom';
+import ReactTestUtils from 'react-dom/test-utils';
+import ShallowRenderer from 'react-test-renderer/shallow';
 import _ from 'underscore';
 
 
@@ -23,13 +24,13 @@ describe('The DateRangePicker component', function () {
     };
 
     this.useShallowRenderer = (props) => {
-      this.shallowRenderer = TestUtils.createRenderer();
+      this.shallowRenderer = new ShallowRenderer();
       this.shallowRenderer.render(getDateRangePicker(props));
       this.renderedComponent = this.shallowRenderer.getRenderOutput();
     };
 
     this.useDocumentRenderer = (props) => {
-      this.component = this.renderedComponent = TestUtils.renderIntoDocument(getDateRangePicker(props));
+      this.component = this.renderedComponent = ReactTestUtils.renderIntoDocument(getDateRangePicker(props));
     };
 
     this.useDocumentRendererWithComplexStates = () => {
@@ -71,15 +72,11 @@ describe('The DateRangePicker component', function () {
       });
     };
 
-
-    this.spyCx = spyOn(DateRangePicker.prototype.__reactAutoBindMap, 'cx').and.callFake( (data) => {
-      return data.element || 'my-class';
-    });
   });
 
   afterEach( function () {
     if (this.component) {
-      React.unmountComponentAtNode(React.findDOMNode(this.component).parentNode);
+      ReactDOM.unmountComponentAtNode(ReactDOM.findDOMNode(this.component).parentNode);
     }
   });
 
@@ -87,8 +84,14 @@ describe('The DateRangePicker component', function () {
   it('defines the expected top level elements', function () {
     this.useShallowRenderer();
     expect(this.renderedComponent.type).toBe('div');
-    expect(this.spyCx).toHaveBeenCalledWith({element: null});
-    expect(this.renderedComponent.props.className).toBe('my-class');
+    expect(this.renderedComponent.props.className).toBe('DateRangePicker');
+  });
+
+  it('uses the supplied CSS class', function () {
+    this.useShallowRenderer({
+      className: 'foo-bar',
+    });
+    expect(this.renderedComponent.props.className).toBe('DateRangePicker foo-bar');
   });
 
   describe('contains PaginationArrow components', function () {
@@ -122,8 +125,8 @@ describe('The DateRangePicker component', function () {
         initialYear: 2000,
         initialMonth: 6,
       });
-      var leftArrow = TestUtils.scryRenderedDOMComponentsWithClass(this.renderedComponent, 'DateRangePicker__PaginationArrowIcon')[0];
-      TestUtils.Simulate.click(leftArrow);
+      var leftArrow = ReactTestUtils.scryRenderedDOMComponentsWithClass(this.renderedComponent, 'DateRangePicker__PaginationArrowIcon')[0];
+      ReactTestUtils.Simulate.click(leftArrow);
 
       expect(this.renderedComponent.state.month).toBe(5);
     });
@@ -151,8 +154,8 @@ describe('The DateRangePicker component', function () {
         initialYear: 2000,
         initialMonth: 6,
       });
-      var rightArrow = TestUtils.scryRenderedDOMComponentsWithClass(this.renderedComponent, 'DateRangePicker__PaginationArrowIcon')[1];
-      TestUtils.Simulate.click(rightArrow);
+      var rightArrow = ReactTestUtils.scryRenderedDOMComponentsWithClass(this.renderedComponent, 'DateRangePicker__PaginationArrowIcon')[1];
+      ReactTestUtils.Simulate.click(rightArrow);
 
       expect(this.renderedComponent.state.month).toBe(7);
     });
@@ -175,6 +178,112 @@ describe('The DateRangePicker component', function () {
         expect(this.renderedComponent.props.children[1].length).toBe(3);
         expect(this.renderedComponent.props.children[1][0].type).toBe(CalendarMonth);
       });
+    });
+
+    describe('for each component the initial month and year', function () {
+
+      describe('when it is set via initialYear and initialMonth', function () {
+
+        it('this.state.year is set to now.year() if initialYear is not an integer', function () {
+          this.useDocumentRenderer({
+            initialYear: null,
+            initialMonth: 6,
+          });
+          expect(this.renderedComponent.state.year).toBe(moment().year());
+        });
+
+        it('this.state.year set to initialYear if initialYear is an integer', function () {
+          this.useDocumentRenderer({
+            initialYear: 2000,
+            initialMonth: 6,
+          });
+          expect(this.renderedComponent.state.year).toBe(2000);
+        });
+
+        it('this.state.month set to now.month() if initialMonth is not an integer', function () {
+          this.useDocumentRenderer({
+            initialYear: 2000,
+            initialMonth: null,
+          });
+          expect(this.renderedComponent.state.month).toBe(moment().month());
+        });
+
+        it('this.state.month set to initialMonth if initialMonth is an integer', function () {
+          this.useDocumentRenderer({
+            initialYear: 2000,
+            initialMonth: 6,
+          });
+          expect(this.renderedComponent.state.month).toBe(6);
+        });
+
+        it('this.state.month set to initialMonth if initialMonth is a minimum integer', function () {
+          this.useDocumentRenderer({
+            initialYear: 2000,
+            initialMonth: 0,
+          });
+          expect(this.renderedComponent.state.month).toBe(0);
+        });
+
+        it('this.state.month set to initialMonth if initialMonth is a maximum integer', function () {
+          this.useDocumentRenderer({
+            initialYear: 2000,
+            initialMonth: 11,
+          });
+          expect(this.renderedComponent.state.month).toBe(11);
+        });
+
+      });
+
+      describe('when it is set via value and initialFromValue in single mode', function () {
+
+        it('this.state set to now if value is not a moment', function () {
+          this.useDocumentRenderer({
+            selectionType: 'single',
+            value: null,
+            initialFromValue: true,
+          });
+          expect(this.renderedComponent.state.year).toBe(moment().year());
+          expect(this.renderedComponent.state.month).toBe(moment().month());
+        });
+
+        it('this.state set to value if value is a moment', function () {
+          var value = moment('2003 01 01', 'YYYY MM DD');
+          this.useDocumentRenderer({
+            selectionType: 'single',
+            value: value,
+            initialFromValue: true,
+          });
+          expect(this.renderedComponent.state.year).toBe(2003);
+          expect(this.renderedComponent.state.month).toBe(0);
+        });
+
+      });
+
+      describe('when it is set via value and initialFromValue in range mode', function () {
+
+        it('this.state set to now if value is not a moment', function () {
+          this.useDocumentRenderer({
+            selectionType: 'range',
+            value: null,
+            initialFromValue: true,
+          });
+          expect(this.renderedComponent.state.year).toBe(moment().year());
+          expect(this.renderedComponent.state.month).toBe(moment().month());
+        });
+
+        it('this.state set to value if value is a momentRange', function () {
+          var value = moment.range(moment('2003 02 03', 'YYYY MM DD'), moment('2004 07 20', 'YYYY MM DD'));
+          this.useDocumentRenderer({
+            selectionType: 'range',
+            value: value,
+            initialFromValue: true,
+          });
+          expect(this.renderedComponent.state.year).toBe(2003);
+          expect(this.renderedComponent.state.month).toBe(1);
+        });
+
+      });
+
     });
 
     describe('for each component the value', function () {
@@ -246,7 +355,7 @@ describe('The DateRangePicker component', function () {
           initialMonth: 6,
         });
         this.renderedComponent.highlightDate(highlightedDate);
-        var calendarMonthComponent = TestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
+        var calendarMonthComponent = ReactTestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
         expect(calendarMonthComponent.props.highlightedDate).toBe(null);
       });
 
@@ -257,7 +366,7 @@ describe('The DateRangePicker component', function () {
           initialMonth: 6,
         });
         this.renderedComponent.highlightDate(highlightedDate);
-        var calendarMonthComponent = TestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
+        var calendarMonthComponent = ReactTestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
         expect(calendarMonthComponent.props.highlightedDate).toBe(null);
       });
 
@@ -268,7 +377,7 @@ describe('The DateRangePicker component', function () {
           initialMonth: 6,
         });
         this.renderedComponent.highlightDate(highlightedDate);
-        var calendarMonthComponent = TestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
+        var calendarMonthComponent = ReactTestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
         expect(calendarMonthComponent.props.highlightedDate).toBe(highlightedDate);
       });
 
@@ -283,7 +392,7 @@ describe('The DateRangePicker component', function () {
           initialMonth: 6,
         });
         this.renderedComponent.highlightRange(highlightedRange);
-        var calendarMonthComponent = TestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
+        var calendarMonthComponent = ReactTestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
         expect(calendarMonthComponent.props.highlightedRange).toBe(null);
       });
 
@@ -294,7 +403,7 @@ describe('The DateRangePicker component', function () {
           initialMonth: 6,
         });
         this.renderedComponent.highlightRange(highlightedRange);
-        var calendarMonthComponent = TestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
+        var calendarMonthComponent = ReactTestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
         expect(calendarMonthComponent.props.highlightedRange).toBe(null);
       });
 
@@ -305,7 +414,19 @@ describe('The DateRangePicker component', function () {
           initialMonth: 6,
         });
         this.renderedComponent.highlightRange(highlightedRange);
-        var calendarMonthComponent = TestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
+        var calendarMonthComponent = ReactTestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
+        expect(calendarMonthComponent.props.highlightedRange).toBe(highlightedRange);
+      });
+
+      it('is set to highlightedRange on month boundaries', function () {
+        var highlightedRange = moment.range(moment('2016 07 31', 'YYYY MM DD'), moment('2016 08 01', 'YYYY MM DD'));
+        this.useDocumentRenderer({
+          firstOfWeek: 1,
+          initialYear: 2016,
+          initialMonth: 6,
+        });
+        this.renderedComponent.highlightRange(highlightedRange);
+        var calendarMonthComponent = ReactTestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
         expect(calendarMonthComponent.props.highlightedRange).toBe(highlightedRange);
       });
 
@@ -340,43 +461,44 @@ describe('The DateRangePicker component', function () {
     describe('each component is provided with a number of event handlers', function () {
 
       it('onMonthChange calls #changeMonth', function () {
-        var spy = spyOn(DateRangePicker.prototype.__reactAutoBindMap, 'changeMonth');
-        this.useDocumentRenderer();
-        var calendarMonthComponent = TestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
+        this.useDocumentRenderer({
+          initialMonth: 6,
+        });
+        var calendarMonthComponent = ReactTestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
         calendarMonthComponent.props.onMonthChange(5);
-        expect(spy).toHaveBeenCalled();
+        expect(this.renderedComponent.state.month).toBe(5);
       });
 
       it('onYearChange calls #changeYear', function () {
-        var spy = spyOn(DateRangePicker.prototype.__reactAutoBindMap, 'changeYear');
-        this.useDocumentRenderer();
-        var calendarMonthComponent = TestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
-        calendarMonthComponent.props.onYearChange(2000);
-        expect(spy).toHaveBeenCalled();
+        this.useDocumentRenderer({
+          initialYear: 2000,
+        });
+        var calendarMonthComponent = ReactTestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
+        calendarMonthComponent.props.onYearChange(2015);
+        expect(this.renderedComponent.state.year).toBe(2015);
       });
 
       it('onSelectDate calls #onSelectDate', function () {
-        var spy = spyOn(DateRangePicker.prototype.__reactAutoBindMap, 'onSelectDate');
         this.useDocumentRenderer();
-        var calendarMonthComponent = TestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
+        var calendarMonthComponent = ReactTestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
         calendarMonthComponent.props.onSelectDate(moment());
-        expect(spy).toHaveBeenCalled();
+        expect(this.renderedComponent.state.selectedStartDate).toBeDefined();
+
       });
 
       it('onHighlightDate calls #onHighlightDate', function () {
-        var spy = spyOn(DateRangePicker.prototype.__reactAutoBindMap, 'onHighlightDate');
         this.useDocumentRenderer();
-        var calendarMonthComponent = TestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
+        var calendarMonthComponent = ReactTestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
         calendarMonthComponent.props.onHighlightDate(moment());
-        expect(spy).toHaveBeenCalled();
+        expect(this.renderedComponent.state.highlightedDate).toBeDefined();
       });
 
       it('onUnHighlightDate calls #onUnHighlightDate', function () {
-        var spy = spyOn(DateRangePicker.prototype.__reactAutoBindMap, 'onUnHighlightDate');
         this.useDocumentRenderer();
-        var calendarMonthComponent = TestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
+        var calendarMonthComponent = ReactTestUtils.scryRenderedComponentsWithType(this.renderedComponent, CalendarMonth)[0];
+        calendarMonthComponent.props.onHighlightDate(moment());
         calendarMonthComponent.props.onUnHighlightDate(moment());
-        expect(spy).toHaveBeenCalled();
+        expect(this.renderedComponent.state.highlightedDate).toBe(null);
       });
 
     });
@@ -660,7 +782,7 @@ describe('The DateRangePicker component', function () {
       var helpSpan = this.renderedComponent.props.children[3];
       expect(helpSpan.type).toBe('span');
       expect(helpSpan.props).toEqual({
-        className: 'HelpMessage',
+        className: 'DateRangePicker__HelpMessage',
         children: 'help',
       });
     });
@@ -692,39 +814,85 @@ describe('The DateRangePicker component', function () {
   });
 
   describe('#componentWillReceiveProps', function () {
+    describe('updating date states', function () {
+      it('updates state.dateStates if data provided in the props', function () {
+        this.useDocumentRenderer({
+          initialYear: 2000,
+          initialMonth: 6,
+        });
+        spyOn(this.renderedComponent, 'render').and.callFake(function () {
+          return <div />;
+        });
 
-    beforeEach( function () {
-      this.useDocumentRenderer({
-        initialYear: 2000,
-        initialMonth: 6,
+        var newDateStates = ['newDateStates'];
+        spyOn(this.renderedComponent, 'getDateStates').and.returnValue(newDateStates);
+        spyOn(this.renderedComponent, 'getEnabledRange').and.returnValue('newEnabledRange');
+        this.renderedComponent.setState({
+          dateStates: ['oldDateStates'],
+        });
+        this.renderedComponent.componentWillReceiveProps({});
+        expect(this.renderedComponent.state.dateStates).toBe(newDateStates);
       });
-      spyOn(this.renderedComponent, 'render').and.callFake( function () {
-        return <div></div>;
+
+      it('returns to initial view if data provided goes from a date range to a falsy value', function () {
+        var initialYear = 2000;
+        var initialMonth = 6;
+        var value = moment.range(moment(new Date('1982/07/03')), moment(new Date('1982/07/21')));
+        this.useDocumentRenderer({
+          initialYear,
+          initialMonth,
+          value,
+        });
+        spyOn(this.renderedComponent, 'render').and.callFake(function () {
+          return <div />;
+        });
+        const newProps = Object.assign({}, this.renderedComponent.props, { value: null });
+        this.renderedComponent.componentWillReceiveProps(newProps);
+
+        expect(this.renderedComponent.state.year).toBe(initialYear);
+        expect(this.renderedComponent.state.month).toBe(initialMonth);
       });
     });
 
-    it('updates state.dateStates if data provided in the props', function () {
-      var newDateStates = ['newDateStates'];
-      spyOn(this.renderedComponent, 'getDateStates').and.returnValue(newDateStates);
-      spyOn(this.renderedComponent, 'getEnabledRange').and.returnValue('newEnabledRange');
-      this.renderedComponent.setState({
-        dateStates: ['oldDateStates'],
+    describe('updating the value', function () {
+      describe('when the selection type is single', function () {
+        beforeEach( function () {
+          this.useDocumentRenderer({
+          });
+          spyOn(this.renderedComponent, 'render').and.callFake(function () {
+            return <div />;
+          });
+        });
+
+        it('updates component year and month if value is updated with a single date', function () {
+          var newValue = moment(new Date('1985/10/26'));
+          spyOn(this.renderedComponent, 'getDateStates').and.returnValue([]);
+          this.renderedComponent.componentWillReceiveProps({value: newValue, selectionType: 'single'});
+          expect(this.renderedComponent.state.year).toBe(newValue.year());
+          expect(this.renderedComponent.state.month).toBe(newValue.month());
+        });
       });
-      this.renderedComponent.componentWillReceiveProps({});
-      expect(this.renderedComponent.state.dateStates).toBe(newDateStates);
     });
 
-    it('updates state.enabledRange if data provided in the props', function() {
-      var newEnabledRange = moment.range(moment('2003 01 01', 'YYYY MM DD'), moment('2005 01 01', 'YYYY MM DD'));
-      spyOn(this.renderedComponent, 'getDateStates').and.returnValue(['newDateStates']);
-      spyOn(this.renderedComponent, 'getEnabledRange').and.returnValue(newEnabledRange);
-      this.renderedComponent.setState({
-        enabledRange: moment.range(moment('2003 01 01', 'YYYY MM DD'), moment('2004 01 01', 'YYYY MM DD')),
+    describe('when the selection type is range', function () {
+      beforeEach( function () {
+        this.useDocumentRenderer({
+          selectionType: 'range',
+          singleDateRange: true,
+        });
+        spyOn(this.renderedComponent, 'render').and.callFake(function () {
+          return <div />;
+        });
       });
-      this.renderedComponent.componentWillReceiveProps({});
-      expect(this.renderedComponent.state.enabledRange).toBe(newEnabledRange);
-    });
 
+      it('updates component year and month if value is a range', function () {
+        var newValue = moment.range(moment(new Date('1985/10/26')), moment(new Date('2015/10/21')));
+        spyOn(this.renderedComponent, 'getDateStates').and.returnValue([]);
+        this.renderedComponent.componentWillReceiveProps({value: newValue, selectionType: 'range'});
+        expect(this.renderedComponent.state.year).toBe(newValue.start.year());
+        expect(this.renderedComponent.state.month).toBe(newValue.start.month());
+      });
+    });
   });
 
   describe('#isDateSelectable', function () {
